@@ -2434,8 +2434,11 @@ function initWebSerial() {
     if (activeReader) {
       try {
         await activeReader.cancel();
-      } catch (_) {
-        // Ignore cancellation race during teardown
+      } catch (cancelErr) {
+        // Expected when the stream has already been closed or released during teardown.
+        if (cancelErr.name !== 'InvalidStateError') {
+          log('out-webserial', `Reader cancel warning: ${cancelErr.message}`, 'warn');
+        }
       }
     }
     if (activePort) {
@@ -2462,13 +2465,14 @@ function initWebSerial() {
       setOutput('out-webserial', 'Serial port connected at 9600 baud. Waiting for incoming data…', 'ok');
       globalLog('ok', 'WebSerial', 'Serial port opened');
 
-      while (activePort?.readable && reading) {
+      if (activePort?.readable) {
         activeReader = activePort.readable.getReader();
         const decoder = new TextDecoder();
         try {
           while (reading) {
             const { value, done } = await activeReader.read();
             if (done) break;
+            if (!reading) break;
             if (value?.length) {
               const text = decoder.decode(value, { stream: true });
               if (text) log('out-webserial', `RX: ${text}`, 'ok');
@@ -2480,7 +2484,11 @@ function initWebSerial() {
             globalLog('error', 'WebSerial', `read error: ${err.message}`);
           }
         } finally {
-          activeReader.releaseLock();
+          try {
+            activeReader.releaseLock();
+          } catch (releaseErr) {
+            log('out-webserial', `Reader release warning: ${releaseErr.message}`, 'warn');
+          }
           activeReader = null;
         }
       }
