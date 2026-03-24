@@ -83,6 +83,9 @@
     <li><a href="#sec-broadcast">38. BroadcastChannel API</a></li>
     <li><a href="#sec-storage-event">39. Storage Event Demo</a></li>
     <li><a href="#sec-url-utils">40. URL &amp; Routing Utilities</a></li>
+    <li><a href="#sec-webhid">41. WebHID API</a></li>
+    <li><a href="#sec-webusb">42. WebUSB API</a></li>
+    <li><a href="#sec-webserial">43. Web Serial API</a></li>
   </ul>
 </nav>
 
@@ -796,6 +799,67 @@
       <button class="btn btn-ghost" id="btn-url-remove">Remove Query Param</button>
     </div>
     <div class="output" id="out-url-utils">No data yet.</div>
+  </section>
+
+  <!-- 41 ─ WebHID -->
+  <section class="card" id="sec-webhid">
+    <div class="card-header">
+      <h2 class="card-title">WebHID API <span class="badge-feature level-experimental">Experimental</span></h2>
+      <span class="badge" id="badge-webhid">checking…</span>
+    </div>
+    <p class="card-desc">
+      Connects Human Interface Devices (HID) like custom controllers via <code>navigator.hid</code>.
+      Access requires secure context, explicit user interaction, and browser support (mostly Chromium).
+    </p>
+    <p class="card-note">
+      🔒 HTTPS + user gesture required. Only devices granted by the user are visible.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-hid-connect">Connect HID Device</button>
+      <button class="btn btn-ghost" id="btn-hid-list">List Connected Devices</button>
+    </div>
+    <div class="output" id="out-webhid">No data yet.</div>
+  </section>
+
+  <!-- 42 ─ WebUSB -->
+  <section class="card" id="sec-webusb">
+    <div class="card-header">
+      <h2 class="card-title">WebUSB API <span class="badge-feature level-restricted">Restricted</span></h2>
+      <span class="badge" id="badge-webusb">checking…</span>
+    </div>
+    <p class="card-desc">
+      Requests USB device access using <code>navigator.usb.requestDevice()</code>.
+      Browser security model only exposes devices explicitly approved by the user.
+    </p>
+    <p class="card-note">
+      🔒 HTTPS + user gesture required. Availability is limited to specific browsers/platforms.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-usb-request">Request USB Device</button>
+      <button class="btn btn-ghost" id="btn-usb-list">List Approved Devices</button>
+    </div>
+    <div class="output" id="out-webusb">No data yet.</div>
+  </section>
+
+  <!-- 43 ─ Web Serial -->
+  <section class="card" id="sec-webserial">
+    <div class="card-header">
+      <h2 class="card-title">Web Serial API <span class="badge-feature level-experimental">Experimental</span></h2>
+      <span class="badge" id="badge-webserial">checking…</span>
+    </div>
+    <p class="card-desc">
+      Connects to serial devices using <code>navigator.serial</code>. After opening a port,
+      incoming data is streamed live into the output log.
+    </p>
+    <p class="card-note">
+      🔒 HTTPS + user gesture required. Serial support is browser- and OS-dependent.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-serial-connect">Connect Serial Device</button>
+      <button class="btn btn-ghost" id="btn-serial-disconnect">Disconnect</button>
+      <button class="btn btn-ghost" id="btn-serial-list">List Granted Ports</button>
+    </div>
+    <div class="output" id="out-webserial">No data yet.</div>
   </section>
 
 </main>
