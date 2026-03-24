@@ -1610,7 +1610,12 @@ function initPermissionsApi() {
       }
     }
 
-    const level = supportedCount === 0 ? 'unsupported' : unsupportedCount > 0 ? 'limited' : 'supported';
+    let level = 'supported';
+    if (supportedCount === 0) {
+      level = 'unsupported';
+    } else if (unsupportedCount > 0) {
+      level = 'limited';
+    }
     setStatus('badge-permissions', level);
     setOutput('out-permissions', lines.join('\n'), level === 'unsupported' ? 'err' : 'ok');
     globalLog('info', 'Permissions', `Checked ${supportedCount} supported, ${unsupportedCount} unsupported`);
@@ -1656,7 +1661,10 @@ function initPwaInstallability() {
     const secure = window.isSecureContext;
     const installable = !!deferredPrompt;
 
-    const level = (manifest.linked && secure) ? (installable || standalone ? 'supported' : 'limited') : 'unsupported';
+    let level = 'unsupported';
+    if (manifest.linked && secure) {
+      level = installable || standalone ? 'supported' : 'limited';
+    }
     setStatus('badge-pwa', level);
     updateInstallButton();
 
@@ -1738,6 +1746,10 @@ function initGenericSensors() {
   let instances = [];
   const latest = {};
 
+  function formatQuaternion(q) {
+    return `q=[${(q[0] ?? 0).toFixed(3)}, ${(q[1] ?? 0).toFixed(3)}, ${(q[2] ?? 0).toFixed(3)}, ${(q[3] ?? 0).toFixed(3)}]`;
+  }
+
   function renderReadings() {
     const lines = ['Experimental API: support and permissions vary strongly by browser/device.\n'];
     specs.forEach((spec) => {
@@ -1774,17 +1786,15 @@ function initGenericSensors() {
         const sensor = new window[spec.ctor]({ frequency: 30 });
         sensor.addEventListener('reading', () => {
           if (spec.type === 'xyz') {
-            latest[spec.label] =
-              `x=${Number(sensor.x ?? 0).toFixed(3)}, y=${Number(sensor.y ?? 0).toFixed(3)}, z=${Number(sensor.z ?? 0).toFixed(3)}`;
+            latest[spec.label] = `x=${(sensor.x ?? 0).toFixed(3)}, y=${(sensor.y ?? 0).toFixed(3)}, z=${(sensor.z ?? 0).toFixed(3)}`;
           } else {
             const q = sensor.quaternion || [];
-            latest[spec.label] =
-              `q=[${(q[0] ?? 0).toFixed(3)}, ${(q[1] ?? 0).toFixed(3)}, ${(q[2] ?? 0).toFixed(3)}, ${(q[3] ?? 0).toFixed(3)}]`;
+            latest[spec.label] = formatQuaternion(q);
           }
           renderReadings();
         });
         sensor.addEventListener('error', (event) => {
-          const name = event.error?.name ?? 'SensorError';
+          const name = event.error?.name ?? 'UnknownSensorError';
           const msg = event.error?.message ?? 'unknown sensor error';
           log('out-sensors', `${spec.label} error: ${name} - ${msg}`, 'err');
           globalLog('error', 'Sensors', `${spec.label}: ${name}`);
@@ -1812,7 +1822,12 @@ function initGraphicsApis() {
   const probeCanvas = document.createElement('canvas');
   const webglSupported = !!(probeCanvas.getContext('webgl2') || probeCanvas.getContext('webgl') || probeCanvas.getContext('experimental-webgl'));
   const offscreenSupported = 'OffscreenCanvas' in window;
-  const level = ctx && webglSupported ? 'supported' : (ctx || webglSupported || offscreenSupported) ? 'limited' : 'unsupported';
+  let level = 'unsupported';
+  if (ctx && webglSupported) {
+    level = 'supported';
+  } else if (ctx || webglSupported || offscreenSupported) {
+    level = 'limited';
+  }
   setStatus('badge-graphics', level);
 
   if (!ctx) {
