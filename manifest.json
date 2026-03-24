@@ -1,0 +1,12 @@
+{
+  "name": "Browser API Playground",
+  "short_name": "API Playground",
+  "description": "Interactive showcase of modern browser APIs with live demos.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "lang": "en",
+  "icons": []
+}

@@ -396,6 +396,26 @@ code {
   min-width: 140px;
 }
 
+.text-area-input {
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: .65em .8em;
+  font-size: .85rem;
+  font-family: var(--font-mono);
+  outline: none;
+  transition: border-color var(--t-fast);
+  width: 100%;
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.text-area-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
 .text-input:focus, .select-input:focus {
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px var(--accent-glow);
@@ -579,6 +599,16 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   font-size: .85rem;
   color: var(--text-muted);
   cursor: nwse-resize;
+}
+
+/* ── Graphics & Rendering API card ──────────────────────────────────────────── */
+.graphics-canvas {
+  width: 100%;
+  min-height: 180px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  touch-action: none;
 }
 
 /* ── Global Event Log ───────────────────────────────────────────────────────── */

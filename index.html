@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Interactive showcase of modern Browser APIs — feature detection, live demos and status indicators for 30+ Web APIs." />
+  <meta name="theme-color" content="#0d1117" />
   <title>Browser API Playground</title>
+  <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -71,6 +73,16 @@
     <li><a href="#sec-resize">28. Resize Observer</a></li>
     <li><a href="#sec-screen">29. Screen Info</a></li>
     <li><a href="#sec-crypto">30. Crypto API</a></li>
+    <li><a href="#sec-permissions">31. Permissions API</a></li>
+    <li><a href="#sec-pwa">32. PWA &amp; Installability</a></li>
+    <li><a href="#sec-sensors">33. Generic Sensor API</a></li>
+    <li><a href="#sec-graphics">34. Graphics &amp; Rendering APIs</a></li>
+    <li><a href="#sec-webrtc">35. WebRTC</a></li>
+    <li><a href="#sec-realtime">36. Realtime Communication APIs</a></li>
+    <li><a href="#sec-fsa">37. File System Access API</a></li>
+    <li><a href="#sec-broadcast">38. BroadcastChannel API</a></li>
+    <li><a href="#sec-storage-event">39. Storage Event Demo</a></li>
+    <li><a href="#sec-url-utils">40. URL &amp; Routing Utilities</a></li>
   </ul>
 </nav>
 
@@ -612,6 +624,178 @@
       <button class="btn" id="btn-crypto-hash">Hash (SHA-256)</button>
     </div>
     <div class="output" id="out-crypto">No data yet.</div>
+  </section>
+
+  <!-- 31 ─ Permissions API -->
+  <section class="card" id="sec-permissions">
+    <div class="card-header">
+      <h2 class="card-title">Permissions API</h2>
+      <span class="badge" id="badge-permissions">checking…</span>
+    </div>
+    <p class="card-desc">
+      Queries permission states via <code>navigator.permissions.query()</code>. Browsers support different permission names, so unsupported entries are shown explicitly.
+      Some names may require HTTPS or user interaction before a meaningful state is available.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-permissions-refresh">Refresh Permission States</button>
+    </div>
+    <div class="output" id="out-permissions">No data yet.</div>
+  </section>
+
+  <!-- 32 ─ PWA & Installability -->
+  <section class="card" id="sec-pwa">
+    <div class="card-header">
+      <h2 class="card-title">PWA &amp; Installability</h2>
+      <span class="badge" id="badge-pwa">checking…</span>
+    </div>
+    <p class="card-desc">
+      Detects manifest presence, install prompt availability and standalone mode. Installability depends on HTTPS, a valid manifest, and browser support.
+      GitHub Pages is HTTPS-enabled, but install UI differs by browser.
+    </p>
+    <div class="card-actions">
+      <button class="btn btn-ghost" id="btn-pwa-refresh">Refresh PWA Status</button>
+      <button class="btn" id="btn-pwa-install">Install App</button>
+    </div>
+    <div class="output" id="out-pwa">No data yet.</div>
+  </section>
+
+  <!-- 33 ─ Generic Sensor API -->
+  <section class="card" id="sec-sensors">
+    <div class="card-header">
+      <h2 class="card-title">Generic Sensor API</h2>
+      <span class="badge" id="badge-sensors">checking…</span>
+    </div>
+    <p class="card-desc">
+      Tries <code>Accelerometer</code>, <code>Gyroscope</code>, <code>Magnetometer</code>, and orientation sensors.
+      These APIs are often experimental, permission-gated, or unavailable on many devices/browsers.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-sensors-start">Start Sensors</button>
+      <button class="btn btn-ghost" id="btn-sensors-stop">Stop Sensors</button>
+    </div>
+    <div class="output" id="out-sensors">No data yet.</div>
+  </section>
+
+  <!-- 34 ─ Graphics & Rendering APIs -->
+  <section class="card" id="sec-graphics">
+    <div class="card-header">
+      <h2 class="card-title">Graphics &amp; Rendering APIs</h2>
+      <span class="badge" id="badge-graphics">checking…</span>
+    </div>
+    <p class="card-desc">
+      Includes a Canvas 2D interactive trail, WebGL support/status, and OffscreenCanvas capability detection (commonly used together with Workers).
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-canvas-clear">Clear Canvas</button>
+      <button class="btn btn-ghost" id="btn-webgl-check">Check WebGL</button>
+      <button class="btn btn-ghost" id="btn-offscreen-check">Check OffscreenCanvas</button>
+    </div>
+    <canvas id="graphics-canvas" class="graphics-canvas" width="520" height="180" aria-label="Canvas 2D demo area"></canvas>
+    <div class="output" id="out-graphics">Move your pointer over the canvas to draw animated circles.</div>
+  </section>
+
+  <!-- 35 ─ WebRTC -->
+  <section class="card" id="sec-webrtc">
+    <div class="card-header">
+      <h2 class="card-title">WebRTC</h2>
+      <span class="badge" id="badge-webrtc">checking…</span>
+    </div>
+    <p class="card-desc">
+      Demonstrates local <code>RTCPeerConnection</code> behavior (ICE gathering + DataChannel). A full peer-to-peer connection needs external signaling, which this static demo intentionally does not provide.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-webrtc-start">Run Local WebRTC Demo</button>
+      <button class="btn btn-ghost" id="btn-webrtc-close">Close PeerConnection</button>
+    </div>
+    <div class="output" id="out-webrtc">No data yet.</div>
+  </section>
+
+  <!-- 36 ─ Realtime Communication APIs -->
+  <section class="card" id="sec-realtime">
+    <div class="card-header">
+      <h2 class="card-title">Realtime Communication APIs</h2>
+      <span class="badge" id="badge-realtime">checking…</span>
+    </div>
+    <p class="card-desc">
+      Checks <code>WebSocket</code> and <code>EventSource</code> support. Without a backend endpoint this card provides transparent capability checks and a local simulation log only.
+    </p>
+    <div class="card-actions">
+      <button class="btn btn-ghost" id="btn-realtime-check">Check Support</button>
+      <button class="btn" id="btn-realtime-simulate">Run Local Simulation</button>
+    </div>
+    <div class="output" id="out-realtime">No data yet.</div>
+  </section>
+
+  <!-- 37 ─ File System Access API -->
+  <section class="card" id="sec-fsa">
+    <div class="card-header">
+      <h2 class="card-title">File System Access API</h2>
+      <span class="badge" id="badge-fsa">checking…</span>
+    </div>
+    <p class="card-desc">
+      Uses <code>showOpenFilePicker()</code> and <code>showSaveFilePicker()</code> when supported (mostly Chromium). Falls back with clear messaging in unsupported browsers.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-fsa-open">Open Text File</button>
+      <button class="btn btn-ghost" id="btn-fsa-save">Save Text File</button>
+    </div>
+    <textarea id="fsa-text" class="text-area-input" rows="5" aria-label="Editable content for file save demo">Hello from Browser API Playground.</textarea>
+    <div class="output" id="out-fsa">No data yet.</div>
+  </section>
+
+  <!-- 38 ─ BroadcastChannel -->
+  <section class="card" id="sec-broadcast">
+    <div class="card-header">
+      <h2 class="card-title">BroadcastChannel API</h2>
+      <span class="badge" id="badge-broadcast">checking…</span>
+    </div>
+    <p class="card-desc">
+      Sends and receives messages between tabs/windows of the same origin. Open this page in a second tab to see cross-tab behavior clearly.
+    </p>
+    <div class="card-actions">
+      <input type="text" id="broadcast-message" class="text-input" value="Hello from this tab!" />
+      <button class="btn" id="btn-broadcast-send">Send Message</button>
+      <button class="btn btn-ghost" id="btn-broadcast-close">Close Channel</button>
+    </div>
+    <div class="output" id="out-broadcast">No data yet.</div>
+  </section>
+
+  <!-- 39 ─ Storage Event -->
+  <section class="card" id="sec-storage-event">
+    <div class="card-header">
+      <h2 class="card-title">Storage Event Demo</h2>
+      <span class="badge" id="badge-storage-event">checking…</span>
+    </div>
+    <p class="card-desc">
+      Writes values into <code>localStorage</code> and listens for <code>storage</code> events.
+      Events are primarily visible across different tabs/windows, not within the same tab that triggered the write.
+    </p>
+    <div class="card-actions">
+      <input type="text" id="storage-event-key" class="text-input" value="shared-key" />
+      <input type="text" id="storage-event-val" class="text-input" value="value-from-tab" />
+      <button class="btn" id="btn-storage-event-write">Write localStorage</button>
+      <button class="btn btn-ghost" id="btn-storage-event-remove">Remove Key</button>
+    </div>
+    <div class="output" id="out-storage-event">No data yet.</div>
+  </section>
+
+  <!-- 40 ─ URL Utilities -->
+  <section class="card" id="sec-url-utils">
+    <div class="card-header">
+      <h2 class="card-title">URL &amp; Routing Utilities</h2>
+      <span class="badge" id="badge-url-utils">checking…</span>
+    </div>
+    <p class="card-desc">
+      Parses the current URL with <code>URL</code>/<code>URLSearchParams</code> and updates query parameters via the History API without page reload.
+    </p>
+    <div class="card-actions">
+      <input type="text" id="url-param-key" class="text-input" value="demo" />
+      <input type="text" id="url-param-val" class="text-input" value="1" />
+      <button class="btn" id="btn-url-read">Analyze URL</button>
+      <button class="btn btn-ghost" id="btn-url-set">Set Query Param</button>
+      <button class="btn btn-ghost" id="btn-url-remove">Remove Query Param</button>
+    </div>
+    <div class="output" id="out-url-utils">No data yet.</div>
   </section>
 
 </main>

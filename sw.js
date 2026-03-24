@@ -13,7 +13,8 @@ const PRECACHE_URLS = [
   './',
   './index.html',
   './style.css',
-  './script.js'
+  './script.js',
+  './manifest.json'
 ];
 
 // ─── Lifecycle: Install ──────────────────────────────────────────────────────
