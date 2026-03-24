@@ -100,6 +100,14 @@ function bufToHex(buffer) {
     .join('');
 }
 
+/** Enable/disable multiple controls safely */
+function setDisabled(ids, disabled) {
+  ids.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+  });
+}
+
 /* ══════════════════════════════════════════════════════════════════════════════
    SYSTEM OVERVIEW — displayed in hero
    ══════════════════════════════════════════════════════════════════════════════ */
@@ -1370,39 +1378,68 @@ function initPerformance() {
     return;
   }
 
+  const observedPaint = [];
+  if ('PerformanceObserver' in window) {
+    try {
+      const po = new PerformanceObserver((list) => {
+        list.getEntries().forEach((entry) => {
+          observedPaint.push({
+            name: entry.name,
+            value: entry.startTime.toFixed(2)
+          });
+        });
+      });
+      po.observe({ type: 'paint', buffered: true });
+    } catch (_) {
+      // Some browsers throw for unsupported observer entry types.
+    }
+  }
+
   document.getElementById('btn-perf')?.addEventListener('click', () => {
-    const nav = performance.getEntriesByType('navigation')[0] || performance.timing;
+    const nav = performance.getEntriesByType('navigation')[0];
+    const paintEntries = performance.getEntriesByType('paint');
     const now = performance.now().toFixed(2);
 
     let text = `performance.now(): ${now} ms\n\n`;
 
-    // Navigation Timing Level 2 (modern API)
-    if (nav && nav.responseEnd !== undefined) {
-      const dns  = (nav.domainLookupEnd - nav.domainLookupStart).toFixed(1);
-      const tcp  = (nav.connectEnd - nav.connectStart).toFixed(1);
-      const ttfb = (nav.responseStart - nav.requestStart).toFixed(1);
-      const dl   = (nav.responseEnd - nav.responseStart).toFixed(1);
-      const dom  = (nav.domContentLoadedEventEnd - nav.startTime).toFixed(1);
-      const load = (nav.loadEventEnd - nav.startTime).toFixed(1);
-
-      text += `DNS lookup:  ${dns} ms\n` +
-              `TCP connect: ${tcp} ms\n` +
-              `TTFB:        ${ttfb} ms\n` +
-              `Download:    ${dl} ms\n` +
-              `DOMContentLoaded: ${dom} ms\n` +
-              `Load complete:    ${load} ms\n`;
+    if (nav) {
+      text += `Navigation Timing Level 2\n` +
+              `Type:               ${nav.type}\n` +
+              `DOM Content Loaded: ${nav.domContentLoadedEventEnd.toFixed(1)} ms\n` +
+              `Load Event End:     ${nav.loadEventEnd.toFixed(1)} ms\n` +
+              `DNS lookup:         ${(nav.domainLookupEnd - nav.domainLookupStart).toFixed(1)} ms\n` +
+              `TCP connect:        ${(nav.connectEnd - nav.connectStart).toFixed(1)} ms\n` +
+              `TTFB:               ${(nav.responseStart - nav.requestStart).toFixed(1)} ms\n` +
+              `Download:           ${(nav.responseEnd - nav.responseStart).toFixed(1)} ms\n`;
+    } else if (performance.timing) {
+      const t = performance.timing;
+      text += `Legacy timing fallback\n` +
+              `DOM Content Loaded: ${t.domContentLoadedEventEnd - t.navigationStart} ms\n` +
+              `Load Event End:     ${t.loadEventEnd - t.navigationStart} ms\n`;
     }
 
-    // Memory (Chrome only)
+    if (paintEntries.length > 0 || observedPaint.length > 0) {
+      const paintMap = new Map();
+      paintEntries.forEach((entry) => paintMap.set(entry.name, entry.startTime.toFixed(2)));
+      observedPaint.forEach((entry) => {
+        if (!paintMap.has(entry.name)) paintMap.set(entry.name, entry.value);
+      });
+      text += '\nPaint Timing\n';
+      text += `first-paint:             ${paintMap.get('first-paint') ?? 'n/a'} ms\n`;
+      text += `first-contentful-paint:  ${paintMap.get('first-contentful-paint') ?? 'n/a'} ms\n`;
+    } else {
+      text += '\nPaint Timing not available in this browser.\n';
+    }
+
     if (performance.memory) {
       const mem = performance.memory;
-      text += `\nJS heap used: ${formatBytes(mem.usedJSHeapSize)}\n` +
+      text += `\nJS heap used:  ${formatBytes(mem.usedJSHeapSize)}\n` +
               `JS heap total: ${formatBytes(mem.totalJSHeapSize)}\n` +
               `JS heap limit: ${formatBytes(mem.jsHeapSizeLimit)}`;
     }
 
     setOutput('out-performance', text, 'ok');
-    globalLog('ok', 'Performance', `now=${now}ms`);
+    globalLog('ok', 'Performance', `Collected navigation + paint timings`);
   });
 }
 
@@ -1531,6 +1568,662 @@ function initCrypto() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
+   31. PERMISSIONS API
+   ══════════════════════════════════════════════════════════════════════════════ */
+function initPermissionsApi() {
+  const supported = 'permissions' in navigator && typeof navigator.permissions.query === 'function';
+  setStatus('badge-permissions', supported ? 'supported' : 'unsupported');
+
+  const permissionNames = [
+    'geolocation',
+    'notifications',
+    'microphone',
+    'camera',
+    'clipboard-read',
+    'clipboard-write'
+  ];
+
+  if (!supported) {
+    setOutput('out-permissions', 'Permissions API is not supported in this browser.', 'err');
+    setDisabled(['btn-permissions-refresh'], true);
+    return;
+  }
+
+  async function refreshPermissions() {
+    const lines = ['Permission names can vary by browser; unsupported names are listed below.\n'];
+    let supportedCount = 0;
+    let unsupportedCount = 0;
+
+    for (const name of permissionNames) {
+      try {
+        const status = await navigator.permissions.query({ name });
+        supportedCount++;
+        lines.push(`✅ ${name}: supported, state = ${status.state}`);
+
+        status.onchange = () => {
+          log('out-permissions', `↻ ${name} changed to "${status.state}"`, 'warn');
+          globalLog('warn', 'Permissions', `${name} → ${status.state}`);
+        };
+      } catch (_) {
+        unsupportedCount++;
+        lines.push(`❌ ${name}: unsupported in this browser`);
+      }
+    }
+
+    let level = 'supported';
+    if (supportedCount === 0) {
+      level = 'unsupported';
+    } else if (unsupportedCount > 0) {
+      level = 'limited';
+    }
+    setStatus('badge-permissions', level);
+    setOutput('out-permissions', lines.join('\n'), level === 'unsupported' ? 'err' : 'ok');
+    globalLog('info', 'Permissions', `Checked ${supportedCount} supported, ${unsupportedCount} unsupported`);
+  }
+
+  document.getElementById('btn-permissions-refresh')?.addEventListener('click', refreshPermissions);
+  refreshPermissions();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   32. PWA & INSTALLABILITY
+   ══════════════════════════════════════════════════════════════════════════════ */
+function initPwaInstallability() {
+  const installBtn = document.getElementById('btn-pwa-install');
+  const refreshBtn = document.getElementById('btn-pwa-refresh');
+  if (!installBtn || !refreshBtn) return;
+
+  let deferredPrompt = null;
+  let installPromptCaptured = false;
+
+  function isStandaloneMode() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+
+  async function checkManifestLinked() {
+    const link = document.querySelector('link[rel="manifest"]');
+    if (!link) return { linked: false, fetched: false };
+    try {
+      const res = await fetch(link.href, { cache: 'no-store' });
+      return { linked: true, fetched: res.ok };
+    } catch (_) {
+      return { linked: true, fetched: false };
+    }
+  }
+
+  function updateInstallButton() {
+    installBtn.disabled = !deferredPrompt;
+  }
+
+  async function renderPwaStatus() {
+    const manifest = await checkManifestLinked();
+    const standalone = isStandaloneMode();
+    const secure = window.isSecureContext;
+    const installable = !!deferredPrompt;
+
+    let level = 'unsupported';
+    if (manifest.linked && secure) {
+      level = installable || standalone ? 'supported' : 'limited';
+    }
+    setStatus('badge-pwa', level);
+    updateInstallButton();
+
+    setOutput(
+      'out-pwa',
+      `Manifest linked:        ${manifest.linked ? 'yes' : 'no'}\n` +
+      `Manifest fetchable:     ${manifest.fetched ? 'yes' : 'no'}\n` +
+      `Secure context (HTTPS): ${secure ? 'yes' : 'no'}\n` +
+      `Standalone mode:        ${standalone ? 'yes' : 'no'}\n` +
+      `Install prompt ready:   ${installable ? 'yes' : 'no'}\n` +
+      `Prompt captured event:  ${installPromptCaptured ? 'yes' : 'no'}\n\n` +
+      `Note: Installability UI differs between browsers. GitHub Pages provides HTTPS, but browser criteria still apply.`,
+      level === 'unsupported' ? 'err' : 'ok'
+    );
+  }
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredPrompt = event;
+    installPromptCaptured = true;
+    updateInstallButton();
+    renderPwaStatus();
+    globalLog('ok', 'PWA', 'beforeinstallprompt captured');
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    updateInstallButton();
+    renderPwaStatus();
+    globalLog('ok', 'PWA', 'App installed');
+  });
+
+  installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) {
+      setOutput('out-pwa', 'Install prompt is not available right now. Browser criteria may not be met.', 'warn');
+      return;
+    }
+    try {
+      await deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      log('out-pwa', `Install choice: ${choice.outcome}`, choice.outcome === 'accepted' ? 'ok' : 'warn');
+      globalLog(choice.outcome === 'accepted' ? 'ok' : 'warn', 'PWA', `Install ${choice.outcome}`);
+    } catch (err) {
+      log('out-pwa', `Install error: ${err.message}`, 'err');
+    } finally {
+      deferredPrompt = null;
+      updateInstallButton();
+    }
+  });
+
+  refreshBtn.addEventListener('click', renderPwaStatus);
+  renderPwaStatus();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   33. GENERIC SENSOR API
+   ══════════════════════════════════════════════════════════════════════════════ */
+function initGenericSensors() {
+  const specs = [
+    { label: 'Accelerometer', ctor: 'Accelerometer', type: 'xyz' },
+    { label: 'Gyroscope', ctor: 'Gyroscope', type: 'xyz' },
+    { label: 'Magnetometer', ctor: 'Magnetometer', type: 'xyz' },
+    { label: 'AbsoluteOrientationSensor', ctor: 'AbsoluteOrientationSensor', type: 'quat' },
+    { label: 'RelativeOrientationSensor', ctor: 'RelativeOrientationSensor', type: 'quat' }
+  ];
+
+  const supportedSpecs = specs.filter((spec) => typeof window[spec.ctor] === 'function');
+  setStatus(
+    'badge-sensors',
+    supportedSpecs.length === 0 ? 'unsupported' : supportedSpecs.length === specs.length ? 'supported' : 'limited'
+  );
+
+  if (supportedSpecs.length === 0) {
+    setOutput('out-sensors', 'Generic Sensor constructors are not available in this browser.', 'err');
+    setDisabled(['btn-sensors-start', 'btn-sensors-stop'], true);
+    return;
+  }
+
+  let instances = [];
+  const latest = {};
+
+  function formatQuaternion(q) {
+    return `q=[${(q[0] ?? 0).toFixed(3)}, ${(q[1] ?? 0).toFixed(3)}, ${(q[2] ?? 0).toFixed(3)}, ${(q[3] ?? 0).toFixed(3)}]`;
+  }
+
+  function renderReadings() {
+    const lines = ['Experimental API: support and permissions vary strongly by browser/device.\n'];
+    specs.forEach((spec) => {
+      if (latest[spec.label]) {
+        lines.push(`✅ ${spec.label}: ${latest[spec.label]}`);
+      } else if (typeof window[spec.ctor] !== 'function') {
+        lines.push(`❌ ${spec.label}: unsupported`);
+      } else {
+        lines.push(`… ${spec.label}: waiting for readings`);
+      }
+    });
+    setOutput('out-sensors', lines.join('\n'));
+  }
+
+  function stopAll() {
+    instances.forEach((sensor) => {
+      try { sensor.stop(); } catch (_) {}
+    });
+    instances = [];
+    log('out-sensors', 'Stopped all active sensors.', 'warn');
+  }
+
+  document.getElementById('btn-sensors-start')?.addEventListener('click', () => {
+    stopAll();
+    latest.Accelerometer = undefined;
+    latest.Gyroscope = undefined;
+    latest.Magnetometer = undefined;
+    latest.AbsoluteOrientationSensor = undefined;
+    latest.RelativeOrientationSensor = undefined;
+    renderReadings();
+
+    supportedSpecs.forEach((spec) => {
+      try {
+        const sensor = new window[spec.ctor]({ frequency: 30 });
+        sensor.addEventListener('reading', () => {
+          if (spec.type === 'xyz') {
+            latest[spec.label] = `x=${(sensor.x ?? 0).toFixed(3)}, y=${(sensor.y ?? 0).toFixed(3)}, z=${(sensor.z ?? 0).toFixed(3)}`;
+          } else {
+            const q = sensor.quaternion || [];
+            latest[spec.label] = formatQuaternion(q);
+          }
+          renderReadings();
+        });
+        sensor.addEventListener('error', (event) => {
+          const name = event.error?.name ?? 'UnknownSensorError';
+          const msg = event.error?.message ?? 'unknown sensor error';
+          log('out-sensors', `${spec.label} error: ${name} - ${msg}`, 'err');
+          globalLog('error', 'Sensors', `${spec.label}: ${name}`);
+        });
+        sensor.start();
+        instances.push(sensor);
+      } catch (err) {
+        log('out-sensors', `${spec.label} start failed: ${err.message}`, 'err');
+      }
+    });
+  });
+
+  document.getElementById('btn-sensors-stop')?.addEventListener('click', stopAll);
+  renderReadings();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   34. GRAPHICS & RENDERING APIS
+   ══════════════════════════════════════════════════════════════════════════════ */
+function initGraphicsApis() {
+  const canvas = document.getElementById('graphics-canvas');
+  if (!(canvas instanceof HTMLCanvasElement)) return;
+
+  const ctx = canvas.getContext('2d');
+  const probeCanvas = document.createElement('canvas');
+  const webglSupported = !!(probeCanvas.getContext('webgl2') || probeCanvas.getContext('webgl') || probeCanvas.getContext('experimental-webgl'));
+  const offscreenSupported = 'OffscreenCanvas' in window;
+  let level = 'unsupported';
+  if (ctx && webglSupported) {
+    level = 'supported';
+  } else if (ctx || webglSupported || offscreenSupported) {
+    level = 'limited';
+  }
+  setStatus('badge-graphics', level);
+
+  if (!ctx) {
+    setOutput('out-graphics', 'Canvas 2D context is not available.', 'err');
+    setDisabled(['btn-canvas-clear', 'btn-webgl-check', 'btn-offscreen-check'], true);
+    return;
+  }
+
+  let particles = [];
+  let rafId = 0;
+
+  function draw() {
+    ctx.fillStyle = 'rgba(13, 17, 23, 0.18)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    particles = particles.filter((p) => p.life > 0);
+    particles.forEach((p) => {
+      p.life -= 0.02;
+      p.r += 0.15;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(88, 166, 255, ${Math.max(p.life, 0)})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+    rafId = requestAnimationFrame(draw);
+  }
+
+  canvas.addEventListener('pointermove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    particles.push({
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+      r: 3,
+      life: 1
+    });
+  });
+
+  document.getElementById('btn-canvas-clear')?.addEventListener('click', () => {
+    particles = [];
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setOutput('out-graphics', 'Canvas cleared. Move pointer over canvas to draw again.', 'ok');
+  });
+
+  document.getElementById('btn-webgl-check')?.addEventListener('click', () => {
+    const webglCanvas = document.createElement('canvas');
+    const gl = webglCanvas.getContext('webgl2') || webglCanvas.getContext('webgl') || webglCanvas.getContext('experimental-webgl');
+    if (!gl) {
+      log('out-graphics', 'WebGL: not supported.', 'err');
+      return;
+    }
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const renderer = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : 'hidden by browser privacy settings';
+    const vendor = ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) : 'hidden by browser privacy settings';
+    log('out-graphics', `WebGL: supported\nVendor: ${vendor}\nRenderer: ${renderer}`, 'ok');
+    globalLog('ok', 'WebGL', 'Support detected');
+  });
+
+  document.getElementById('btn-offscreen-check')?.addEventListener('click', () => {
+    if (!offscreenSupported) {
+      log('out-graphics', 'OffscreenCanvas: not supported in this browser.', 'err');
+      return;
+    }
+    try {
+      const offscreen = new OffscreenCanvas(64, 64);
+      const offCtx = offscreen.getContext('2d');
+      offCtx.fillStyle = '#58a6ff';
+      offCtx.fillRect(0, 0, 64, 64);
+      log('out-graphics', 'OffscreenCanvas: supported. Typically used with Workers for off-main-thread rendering.', 'ok');
+    } catch (err) {
+      log('out-graphics', `OffscreenCanvas exists but failed to initialize: ${err.message}`, 'warn');
+    }
+  });
+
+  setOutput('out-graphics', 'Canvas 2D active. Use "Check WebGL" and "Check OffscreenCanvas" for capability details.', 'ok');
+  rafId = requestAnimationFrame(draw);
+  window.addEventListener('beforeunload', () => cancelAnimationFrame(rafId), { once: true });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   35. WEBRTC
+   ══════════════════════════════════════════════════════════════════════════════ */
+function initWebRtc() {
+  const supported = 'RTCPeerConnection' in window;
+  setStatus('badge-webrtc', supported ? 'supported' : 'unsupported');
+  if (!supported) {
+    setOutput('out-webrtc', 'RTCPeerConnection is not supported in this browser.', 'err');
+    setDisabled(['btn-webrtc-start', 'btn-webrtc-close'], true);
+    return;
+  }
+
+  let pc = null;
+  let dc = null;
+
+  function closeCurrent() {
+    if (dc) {
+      try { dc.close(); } catch (_) {}
+      dc = null;
+    }
+    if (pc) {
+      try { pc.close(); } catch (_) {}
+      pc = null;
+    }
+    log('out-webrtc', 'PeerConnection closed.', 'warn');
+  }
+
+  document.getElementById('btn-webrtc-start')?.addEventListener('click', async () => {
+    closeCurrent();
+    setOutput('out-webrtc', 'Starting local WebRTC demo (no external signaling server)…');
+    try {
+      pc = new RTCPeerConnection();
+      dc = pc.createDataChannel('local-demo');
+      dc.onopen = () => {
+        log('out-webrtc', 'DataChannel open. Sending local test message…', 'ok');
+        dc.send('hello-local-channel');
+      };
+      dc.onmessage = (event) => {
+        log('out-webrtc', `DataChannel message: ${event.data}`, 'ok');
+      };
+      dc.onerror = (event) => {
+        log('out-webrtc', `DataChannel error: ${event.message ?? 'unknown'}`, 'err');
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          log('out-webrtc', `ICE candidate: ${event.candidate.candidate}`, 'ok');
+        } else {
+          log('out-webrtc', 'ICE gathering complete.', 'warn');
+        }
+      };
+      pc.oniceconnectionstatechange = () => {
+        log('out-webrtc', `ICE state: ${pc.iceConnectionState}`);
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      log('out-webrtc', 'Local offer created. Full peer connection requires signaling and a remote peer.', 'warn');
+      globalLog('ok', 'WebRTC', 'Local offer created and ICE gathering started');
+    } catch (err) {
+      setOutput('out-webrtc', `WebRTC demo failed: ${err.message}`, 'err');
+      closeCurrent();
+    }
+  });
+
+  document.getElementById('btn-webrtc-close')?.addEventListener('click', closeCurrent);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   36. REALTIME COMMUNICATION APIS
+   ══════════════════════════════════════════════════════════════════════════════ */
+function initRealtimeApis() {
+  const wsSupported = 'WebSocket' in window;
+  const sseSupported = 'EventSource' in window;
+  setStatus('badge-realtime', wsSupported && sseSupported ? 'supported' : wsSupported || sseSupported ? 'limited' : 'unsupported');
+
+  function renderSupport() {
+    setOutput(
+      'out-realtime',
+      `WebSocket support:    ${wsSupported ? 'yes' : 'no'}\n` +
+      `EventSource support:  ${sseSupported ? 'yes' : 'no'}\n\n` +
+      `This static demo has no backend endpoint, so it only shows capability detection and local simulation.\n` +
+      `Typical usage: WebSocket for bidirectional messaging, SSE for server→client event streams.`,
+      wsSupported || sseSupported ? 'ok' : 'err'
+    );
+  }
+
+  document.getElementById('btn-realtime-check')?.addEventListener('click', renderSupport);
+  document.getElementById('btn-realtime-simulate')?.addEventListener('click', () => {
+    renderSupport();
+    log('out-realtime', 'Simulated event #1: server heartbeat');
+    setTimeout(() => log('out-realtime', 'Simulated event #2: updated dashboard payload', 'ok'), 500);
+    setTimeout(() => log('out-realtime', 'Simulated event #3: channel closed', 'warn'), 900);
+  });
+  renderSupport();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   37. FILE SYSTEM ACCESS API
+   ══════════════════════════════════════════════════════════════════════════════ */
+function initFileSystemAccess() {
+  const openSupported = typeof window.showOpenFilePicker === 'function';
+  const saveSupported = typeof window.showSaveFilePicker === 'function';
+  setStatus('badge-fsa', openSupported && saveSupported ? 'supported' : openSupported || saveSupported ? 'limited' : 'unsupported');
+
+  const openBtn = document.getElementById('btn-fsa-open');
+  const saveBtn = document.getElementById('btn-fsa-save');
+  const textArea = document.getElementById('fsa-text');
+
+  if (!(textArea instanceof HTMLTextAreaElement)) return;
+
+  if (openBtn) openBtn.disabled = !openSupported;
+  if (saveBtn) saveBtn.disabled = !saveSupported;
+
+  if (!openSupported && !saveSupported) {
+    setOutput('out-fsa', 'File System Access API is not available in this browser. Chromium browsers generally provide support.', 'err');
+    return;
+  }
+
+  openBtn?.addEventListener('click', async () => {
+    if (!openSupported) return;
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        multiple: false,
+        types: [{ description: 'Text files', accept: { 'text/plain': ['.txt', '.md', '.json', '.log'] } }]
+      });
+      const file = await handle.getFile();
+      const content = await file.text();
+      textArea.value = content;
+      setOutput('out-fsa', `Opened "${file.name}" (${file.size} bytes).`, 'ok');
+      globalLog('ok', 'FileSystemAccess', `Opened ${file.name}`);
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        log('out-fsa', 'Open canceled by user.', 'warn');
+      } else {
+        log('out-fsa', `Open failed: ${err.message}`, 'err');
+      }
+    }
+  });
+
+  saveBtn?.addEventListener('click', async () => {
+    if (!saveSupported) return;
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'browser-api-playground.txt',
+        types: [{ description: 'Text files', accept: { 'text/plain': ['.txt'] } }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(textArea.value);
+      await writable.close();
+      setOutput('out-fsa', `Saved ${textArea.value.length} characters to "${handle.name}".`, 'ok');
+      globalLog('ok', 'FileSystemAccess', `Saved ${handle.name}`);
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        log('out-fsa', 'Save canceled by user.', 'warn');
+      } else {
+        log('out-fsa', `Save failed: ${err.message}`, 'err');
+      }
+    }
+  });
+
+  setOutput('out-fsa', 'Use Open/Save to test native file picker support.', 'ok');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   38. BROADCASTCHANNEL API
+   ══════════════════════════════════════════════════════════════════════════════ */
+function initBroadcastChannelApi() {
+  const supported = 'BroadcastChannel' in window;
+  setStatus('badge-broadcast', supported ? 'supported' : 'unsupported');
+  if (!supported) {
+    setOutput('out-broadcast', 'BroadcastChannel is not supported in this browser.', 'err');
+    setDisabled(['btn-broadcast-send', 'btn-broadcast-close'], true);
+    return;
+  }
+
+  const channelName = 'browser-api-playground-channel';
+  const tabId = Math.random().toString(36).slice(2, 8);
+  let channel = new BroadcastChannel(channelName);
+
+  function bindChannel() {
+    if (!channel) return;
+    channel.onmessage = (event) => {
+      const payload = event.data || {};
+      log('out-broadcast', `⬇ from ${payload.from ?? 'unknown'}: ${payload.text ?? JSON.stringify(payload)}`, 'ok');
+      globalLog('ok', 'BroadcastChannel', `Received message from ${payload.from ?? 'unknown'}`);
+    };
+  }
+
+  bindChannel();
+  setOutput('out-broadcast', `Channel "${channelName}" opened for tab ${tabId}. Open another tab to exchange messages.`, 'ok');
+
+  document.getElementById('btn-broadcast-send')?.addEventListener('click', () => {
+    const input = document.getElementById('broadcast-message');
+    const text = input && 'value' in input ? String(input.value) : '';
+    if (!channel) {
+      channel = new BroadcastChannel(channelName);
+      bindChannel();
+    }
+    const payload = { from: tabId, text, ts: Date.now() };
+    channel.postMessage(payload);
+    log('out-broadcast', `⬆ sent from ${tabId}: ${text}`, 'warn');
+    globalLog('info', 'BroadcastChannel', 'Message sent');
+  });
+
+  document.getElementById('btn-broadcast-close')?.addEventListener('click', () => {
+    if (channel) {
+      channel.close();
+      channel = null;
+      log('out-broadcast', 'Channel closed. Click "Send Message" to reopen.', 'warn');
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   39. STORAGE EVENT DEMO
+   ══════════════════════════════════════════════════════════════════════════════ */
+function initStorageEventDemo() {
+  const supported = 'localStorage' in window && 'onstorage' in window;
+  setStatus('badge-storage-event', supported ? 'supported' : 'unsupported');
+  if (!supported) {
+    setOutput('out-storage-event', 'localStorage or storage events are not supported.', 'err');
+    setDisabled(['btn-storage-event-write', 'btn-storage-event-remove'], true);
+    return;
+  }
+
+  document.getElementById('btn-storage-event-write')?.addEventListener('click', () => {
+    const keyEl = document.getElementById('storage-event-key');
+    const valEl = document.getElementById('storage-event-val');
+    const key = keyEl && 'value' in keyEl ? String(keyEl.value).trim() : '';
+    const val = valEl && 'value' in valEl ? String(valEl.value) : '';
+    if (!key) return;
+    localStorage.setItem(key, val);
+    setOutput('out-storage-event', `Set localStorage["${key}"]="${val}".\nNote: "storage" event is emitted in other tabs, not this one.`, 'ok');
+    globalLog('ok', 'StorageEvent', `setItem(${key})`);
+  });
+
+  document.getElementById('btn-storage-event-remove')?.addEventListener('click', () => {
+    const keyEl = document.getElementById('storage-event-key');
+    const key = keyEl && 'value' in keyEl ? String(keyEl.value).trim() : '';
+    if (!key) return;
+    localStorage.removeItem(key);
+    setOutput('out-storage-event', `Removed localStorage["${key}"].\nNote: removal event is visible in other tabs.`, 'warn');
+    globalLog('warn', 'StorageEvent', `removeItem(${key})`);
+  });
+
+  window.addEventListener('storage', (event) => {
+    log(
+      'out-storage-event',
+      `storage event → key: ${event.key ?? 'null'}, old: ${event.oldValue ?? 'null'}, new: ${event.newValue ?? 'null'}`,
+      'ok'
+    );
+    globalLog('info', 'StorageEvent', `Incoming storage event for key: ${event.key ?? 'null'}`);
+  });
+
+  setOutput('out-storage-event', 'Ready. Write/remove keys here, then watch this card from another tab.', 'ok');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   40. URL & ROUTING UTILITIES
+   ══════════════════════════════════════════════════════════════════════════════ */
+function initUrlUtilities() {
+  const supported = 'URL' in window && 'URLSearchParams' in window && 'pushState' in history;
+  setStatus('badge-url-utils', supported ? 'supported' : 'unsupported');
+  if (!supported) {
+    setOutput('out-url-utils', 'URL / URLSearchParams / History API support is incomplete in this browser.', 'err');
+    setDisabled(['btn-url-read', 'btn-url-set', 'btn-url-remove'], true);
+    return;
+  }
+
+  function getInputValue(id, fallback = '') {
+    const el = document.getElementById(id);
+    return el && 'value' in el ? String(el.value) : fallback;
+  }
+
+  function renderUrlAnalysis() {
+    const url = new URL(window.location.href);
+    const params = Array.from(url.searchParams.entries());
+    setOutput(
+      'out-url-utils',
+      `href:      ${url.href}\n` +
+      `origin:    ${url.origin}\n` +
+      `pathname:  ${url.pathname}\n` +
+      `hash:      ${url.hash || '(none)'}\n` +
+      `params:\n${params.length ? params.map(([k, v]) => `  - ${k} = ${v}`).join('\n') : '  (none)'}`,
+      'ok'
+    );
+  }
+
+  document.getElementById('btn-url-read')?.addEventListener('click', renderUrlAnalysis);
+  document.getElementById('btn-url-set')?.addEventListener('click', () => {
+    const key = getInputValue('url-param-key').trim();
+    const value = getInputValue('url-param-val');
+    if (!key) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set(key, value);
+    history.pushState({ source: 'url-utils', key, value }, '', `${url.pathname}${url.search}${url.hash}`);
+    renderUrlAnalysis();
+    globalLog('ok', 'URL', `set ${key}=${value}`);
+  });
+  document.getElementById('btn-url-remove')?.addEventListener('click', () => {
+    const key = getInputValue('url-param-key').trim();
+    if (!key) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete(key);
+    history.pushState({ source: 'url-utils', removed: key }, '', `${url.pathname}${url.search}${url.hash}`);
+    renderUrlAnalysis();
+    globalLog('warn', 'URL', `removed ${key}`);
+  });
+
+  window.addEventListener('popstate', () => {
+    renderUrlAnalysis();
+  });
+
+  renderUrlAnalysis();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
    NAV TOGGLE
    ══════════════════════════════════════════════════════════════════════════════ */
 function initNav() {
@@ -1573,6 +2266,10 @@ function initEventLog() {
     document.getElementById('btn-network')?.click();
     document.getElementById('btn-battery')?.click();
     document.getElementById('btn-visibility-check')?.click();
+    document.getElementById('btn-permissions-refresh')?.click();
+    document.getElementById('btn-pwa-refresh')?.click();
+    document.getElementById('btn-realtime-check')?.click();
+    document.getElementById('btn-url-read')?.click();
     globalLog('ok', 'RunAll', 'Passive tests triggered.');
   });
 }
@@ -1616,4 +2313,14 @@ document.addEventListener('DOMContentLoaded', () => {
   initResizeObserver();
   initScreenInfo();
   initCrypto();
+  initPermissionsApi();
+  initPwaInstallability();
+  initGenericSensors();
+  initGraphicsApis();
+  initWebRtc();
+  initRealtimeApis();
+  initFileSystemAccess();
+  initBroadcastChannelApi();
+  initStorageEventDemo();
+  initUrlUtilities();
 });
