@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Interactive showcase of modern Browser APIs — feature detection, live demos and status indicators for 30+ Web APIs." />
+  <title>Browser API Playground</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     OFFLINE BANNER  (toggled by JS via online/offline events)
+     ══════════════════════════════════════════════════════════ -->
+<div id="offline-banner" class="offline-banner hidden" role="alert">
+  ⚠️ You are currently <strong>offline</strong>. Some demos require an internet connection or HTTPS.
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     HEADER / HERO
+     ══════════════════════════════════════════════════════════ -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge">v1.0</div>
+    <h1 class="hero-title">🧪 Browser API <span class="accent">Playground</span></h1>
+    <p class="hero-subtitle">
+      An interactive showcase of 30 modern Web APIs — live demos, feature detection
+      and status indicators, all in plain HTML + CSS + Vanilla JS.
+    </p>
+    <div class="hero-meta" id="system-overview">
+      <!-- Filled by JS -->
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════
+     STICKY NAV / TABLE OF CONTENTS
+     ══════════════════════════════════════════════════════════ -->
+<nav class="toc" id="toc" aria-label="API navigation">
+  <button class="toc-toggle" id="toc-toggle" aria-expanded="false" aria-controls="toc-list">
+    ☰ Browse APIs
+  </button>
+  <ul class="toc-list" id="toc-list" role="list">
+    <li><a href="#sec-orientation">1. Device Orientation</a></li>
+    <li><a href="#sec-geolocation">2. Geolocation</a></li>
+    <li><a href="#sec-vibration">3. Vibration</a></li>
+    <li><a href="#sec-audio">4. Web Audio</a></li>
+    <li><a href="#sec-battery">5. Battery Status</a></li>
+    <li><a href="#sec-network">6. Network Info</a></li>
+    <li><a href="#sec-online">7. Online / Offline</a></li>
+    <li><a href="#sec-visibility">8. Page Visibility</a></li>
+    <li><a href="#sec-clipboard">9. Clipboard</a></li>
+    <li><a href="#sec-fullscreen">10. Fullscreen</a></li>
+    <li><a href="#sec-wakelock">11. Wake Lock</a></li>
+    <li><a href="#sec-share">12. Web Share</a></li>
+    <li><a href="#sec-notification">13. Notifications</a></li>
+    <li><a href="#sec-speech-synth">14. Speech Synthesis</a></li>
+    <li><a href="#sec-speech-rec">15. Speech Recognition</a></li>
+    <li><a href="#sec-mediadevices">16. MediaDevices</a></li>
+    <li><a href="#sec-dragdrop">17. Drag &amp; Drop / File</a></li>
+    <li><a href="#sec-storage">18. LocalStorage</a></li>
+    <li><a href="#sec-indexeddb">19. IndexedDB</a></li>
+    <li><a href="#sec-sw">20. Service Worker</a></li>
+    <li><a href="#sec-history">21. History API</a></li>
+    <li><a href="#sec-matchmedia">22. MatchMedia</a></li>
+    <li><a href="#sec-pointer">23. Pointer Events</a></li>
+    <li><a href="#sec-gamepad">24. Gamepad</a></li>
+    <li><a href="#sec-worker">25. Web Worker</a></li>
+    <li><a href="#sec-performance">26. Performance</a></li>
+    <li><a href="#sec-intersection">27. Intersection Observer</a></li>
+    <li><a href="#sec-resize">28. Resize Observer</a></li>
+    <li><a href="#sec-screen">29. Screen Info</a></li>
+    <li><a href="#sec-crypto">30. Crypto API</a></li>
+  </ul>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════
+     MAIN CONTENT — API CARDS
+     ══════════════════════════════════════════════════════════ -->
+<main class="main-grid" id="main">
+
+  <!-- 1 ─ Device Orientation / Motion -->
+  <section class="card" id="sec-orientation">
+    <div class="card-header">
+      <h2 class="card-title">Device Orientation &amp; Motion</h2>
+      <span class="badge" id="badge-orientation">checking…</span>
+    </div>
+    <p class="card-desc">
+      Uses <code>DeviceOrientationEvent</code> and <code>DeviceMotionEvent</code> to read
+      gyroscope (α/β/γ) and accelerometer data in real-time.
+      On iOS 13+ a permission button is shown first.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-orientation-start">Start Listening</button>
+      <button class="btn btn-ghost" id="btn-orientation-stop">Stop</button>
+    </div>
+    <div class="output" id="out-orientation">No data yet.</div>
+  </section>
+
+  <!-- 2 ─ Geolocation -->
+  <section class="card" id="sec-geolocation">
+    <div class="card-header">
+      <h2 class="card-title">Geolocation API</h2>
+      <span class="badge" id="badge-geolocation">checking…</span>
+    </div>
+    <p class="card-desc">
+      Retrieves the device's geographic coordinates via <code>navigator.geolocation</code>.
+      Requires user permission; works best over HTTPS.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-geo">Get My Location</button>
+      <button class="btn btn-ghost" id="btn-geo-watch">Watch Position</button>
+      <button class="btn btn-ghost" id="btn-geo-stop">Stop Watch</button>
+    </div>
+    <div class="output" id="out-geolocation">No data yet.</div>
+  </section>
+
+  <!-- 3 ─ Vibration -->
+  <section class="card" id="sec-vibration">
+    <div class="card-header">
+      <h2 class="card-title">Vibration API</h2>
+      <span class="badge" id="badge-vibration">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>navigator.vibrate()</code> triggers haptic feedback.
+      Supported on Android Chrome; not available on iOS or desktop.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-vib-short">Short Buzz</button>
+      <button class="btn" id="btn-vib-long">Long Buzz</button>
+      <button class="btn" id="btn-vib-pattern">SOS Pattern</button>
+    </div>
+    <div class="output" id="out-vibration">No data yet.</div>
+  </section>
+
+  <!-- 4 ─ Web Audio -->
+  <section class="card" id="sec-audio">
+    <div class="card-header">
+      <h2 class="card-title">Web Audio API</h2>
+      <span class="badge" id="badge-audio">checking…</span>
+    </div>
+    <p class="card-desc">
+      Generates tones via <code>AudioContext</code> / oscillator nodes — no audio files needed.
+      Adjust frequency and volume with the sliders below.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-audio-play">▶ Play Tone</button>
+      <button class="btn btn-ghost" id="btn-audio-stop">■ Stop</button>
+    </div>
+    <div class="slider-row">
+      <label>Frequency: <output id="freq-value">440</output> Hz
+        <input type="range" id="slider-freq" min="80" max="2000" value="440" />
+      </label>
+      <label>Volume: <output id="vol-value">50</output>%
+        <input type="range" id="slider-vol" min="0" max="100" value="50" />
+      </label>
+    </div>
+    <div class="output" id="out-audio">No data yet.</div>
+  </section>
+
+  <!-- 5 ─ Battery Status -->
+  <section class="card" id="sec-battery">
+    <div class="card-header">
+      <h2 class="card-title">Battery Status API</h2>
+      <span class="badge" id="badge-battery">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>navigator.getBattery()</code> exposes charging state and level.
+      Currently only supported in Chromium-based browsers.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-battery">Check Battery</button>
+    </div>
+    <div class="output" id="out-battery">No data yet.</div>
+  </section>
+
+  <!-- 6 ─ Network Information -->
+  <section class="card" id="sec-network">
+    <div class="card-header">
+      <h2 class="card-title">Network Information API</h2>
+      <span class="badge" id="badge-network">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>navigator.connection</code> provides effective connection type, downlink speed and
+      round-trip time. Limited support — Chromium only.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-network">Read Network Info</button>
+    </div>
+    <div class="output" id="out-network">No data yet.</div>
+  </section>
+
+  <!-- 7 ─ Online / Offline -->
+  <section class="card" id="sec-online">
+    <div class="card-header">
+      <h2 class="card-title">Online / Offline Status</h2>
+      <span class="badge" id="badge-online">checking…</span>
+    </div>
+    <p class="card-desc">
+      Monitors <code>navigator.onLine</code> and the window-level
+      <code>online</code> / <code>offline</code> events.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-online-check">Check Now</button>
+    </div>
+    <div class="output" id="out-online">No data yet.</div>
+  </section>
+
+  <!-- 8 ─ Page Visibility -->
+  <section class="card" id="sec-visibility">
+    <div class="card-header">
+      <h2 class="card-title">Page Visibility API</h2>
+      <span class="badge" id="badge-visibility">checking…</span>
+    </div>
+    <p class="card-desc">
+      The <code>visibilitychange</code> event fires when the user switches tabs.
+      Useful for pausing media or saving resources when the page is hidden.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-visibility-check">Check Visibility</button>
+    </div>
+    <div class="output" id="out-visibility">Switch tabs to see events appear here.</div>
+  </section>
+
+  <!-- 9 ─ Clipboard -->
+  <section class="card" id="sec-clipboard">
+    <div class="card-header">
+      <h2 class="card-title">Clipboard API</h2>
+      <span class="badge" id="badge-clipboard">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>navigator.clipboard</code> — async read/write access to the system clipboard.
+      Requires HTTPS and user permission to read.
+    </p>
+    <div class="card-actions">
+      <input type="text" id="clipboard-input" class="text-input" placeholder="Type something to copy…" value="Hello from Browser API Playground!" />
+      <button class="btn" id="btn-copy">📋 Copy</button>
+      <button class="btn btn-ghost" id="btn-paste">📄 Paste (read)</button>
+    </div>
+    <div class="output" id="out-clipboard">No data yet.</div>
+  </section>
+
+  <!-- 10 ─ Fullscreen -->
+  <section class="card" id="sec-fullscreen">
+    <div class="card-header">
+      <h2 class="card-title">Fullscreen API</h2>
+      <span class="badge" id="badge-fullscreen">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>Element.requestFullscreen()</code> enters fullscreen mode.
+      Must be triggered by a user gesture.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-fullscreen">⛶ Enter Fullscreen</button>
+      <button class="btn btn-ghost" id="btn-exit-fullscreen">Exit Fullscreen</button>
+    </div>
+    <div class="output" id="out-fullscreen">No data yet.</div>
+  </section>
+
+  <!-- 11 ─ Wake Lock -->
+  <section class="card" id="sec-wakelock">
+    <div class="card-header">
+      <h2 class="card-title">Wake Lock API</h2>
+      <span class="badge" id="badge-wakelock">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>navigator.wakeLock.request('screen')</code> prevents the screen from sleeping.
+      Requires HTTPS. Supported in Chrome/Edge 84+.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-wakelock-on">🔆 Acquire Wake Lock</button>
+      <button class="btn btn-ghost" id="btn-wakelock-off">Release</button>
+    </div>
+    <div class="output" id="out-wakelock">No data yet.</div>
+  </section>
+
+  <!-- 12 ─ Web Share -->
+  <section class="card" id="sec-share">
+    <div class="card-header">
+      <h2 class="card-title">Web Share API</h2>
+      <span class="badge" id="badge-share">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>navigator.share()</code> opens the native OS share dialog.
+      Only available on mobile and select desktop browsers.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-share">📤 Share This Page</button>
+    </div>
+    <div class="output" id="out-share">No data yet.</div>
+  </section>
+
+  <!-- 13 ─ Notifications -->
+  <section class="card" id="sec-notification">
+    <div class="card-header">
+      <h2 class="card-title">Notification API</h2>
+      <span class="badge" id="badge-notification">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>Notification.requestPermission()</code> then <code>new Notification(…)</code>.
+      Desktop Chrome/Firefox/Edge; not available in Safari (without Push) or iOS.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-notif-perm">Request Permission</button>
+      <button class="btn btn-ghost" id="btn-notif-send">Send Test Notification</button>
+    </div>
+    <div class="output" id="out-notification">No data yet.</div>
+  </section>
+
+  <!-- 14 ─ Speech Synthesis -->
+  <section class="card" id="sec-speech-synth">
+    <div class="card-header">
+      <h2 class="card-title">Speech Synthesis API</h2>
+      <span class="badge" id="badge-speech-synth">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>speechSynthesis.speak()</code> converts text to speech using the
+      browser's built-in TTS engine.
+    </p>
+    <div class="card-actions">
+      <input type="text" id="tts-input" class="text-input" placeholder="Enter text to speak…" value="Hello! This is the Browser API Playground speaking." />
+      <select id="voice-select" class="select-input"></select>
+      <button class="btn" id="btn-tts-speak">🔊 Speak</button>
+      <button class="btn btn-ghost" id="btn-tts-stop">■ Stop</button>
+    </div>
+    <div class="output" id="out-speech-synth">No data yet.</div>
+  </section>
+
+  <!-- 15 ─ Speech Recognition -->
+  <section class="card" id="sec-speech-rec">
+    <div class="card-header">
+      <h2 class="card-title">Speech Recognition API</h2>
+      <span class="badge" id="badge-speech-rec">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>SpeechRecognition</code> (or <code>webkitSpeechRecognition</code>)
+      transcribes microphone input. Requires HTTPS and mic permission.
+      Chrome/Edge only.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-rec-start">🎤 Start Listening</button>
+      <button class="btn btn-ghost" id="btn-rec-stop">■ Stop</button>
+    </div>
+    <div class="output" id="out-speech-rec">No data yet.</div>
+  </section>
+
+  <!-- 16 ─ MediaDevices -->
+  <section class="card" id="sec-mediadevices">
+    <div class="card-header">
+      <h2 class="card-title">MediaDevices API</h2>
+      <span class="badge" id="badge-mediadevices">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>navigator.mediaDevices.enumerateDevices()</code> lists cameras/mics.
+      <code>getUserMedia()</code> requests live video/audio. Requires HTTPS.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-enumerate">List Devices</button>
+      <button class="btn" id="btn-camera">📷 Start Camera</button>
+      <button class="btn btn-ghost" id="btn-camera-stop">Stop Camera</button>
+    </div>
+    <video id="camera-preview" class="camera-preview" autoplay muted playsinline
+         aria-label="Live camera preview"></video>
+    <div class="output" id="out-mediadevices">No data yet.</div>
+  </section>
+
+  <!-- 17 ─ Drag & Drop / File API -->
+  <section class="card" id="sec-dragdrop">
+    <div class="card-header">
+      <h2 class="card-title">Drag &amp; Drop + File API</h2>
+      <span class="badge" id="badge-dragdrop">checking…</span>
+    </div>
+    <p class="card-desc">
+      Drop files from the desktop onto the zone below or use the file picker.
+      File metadata and image previews are rendered via the <code>File</code> API.
+    </p>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button"
+         aria-label="Drop files here or click to choose">
+      <span>⬇ Drop files here or click to browse</span>
+      <input type="file" id="file-input" multiple class="visually-hidden" />
+    </div>
+    <div class="output" id="out-dragdrop">No files selected.</div>
+  </section>
+
+  <!-- 18 ─ LocalStorage / SessionStorage -->
+  <section class="card" id="sec-storage">
+    <div class="card-header">
+      <h2 class="card-title">LocalStorage / SessionStorage</h2>
+      <span class="badge" id="badge-storage">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>localStorage</code> persists across sessions; <code>sessionStorage</code>
+      clears when the tab closes. Both store string key/value pairs.
+    </p>
+    <div class="card-actions">
+      <input type="text" id="storage-key" class="text-input" placeholder="Key" value="myKey" style="width:120px" />
+      <input type="text" id="storage-val" class="text-input" placeholder="Value" value="hello" />
+      <button class="btn" id="btn-ls-save">💾 Save (local)</button>
+      <button class="btn btn-ghost" id="btn-ls-load">Load</button>
+      <button class="btn btn-ghost" id="btn-ls-clear">Clear</button>
+      <button class="btn" id="btn-ss-save">💾 Save (session)</button>
+    </div>
+    <div class="output" id="out-storage">No data yet.</div>
+  </section>
+
+  <!-- 19 ─ IndexedDB -->
+  <section class="card" id="sec-indexeddb">
+    <div class="card-header">
+      <h2 class="card-title">IndexedDB</h2>
+      <span class="badge" id="badge-indexeddb">checking…</span>
+    </div>
+    <p class="card-desc">
+      A low-level, transactional, asynchronous key-value store built into every
+      modern browser. Ideal for large structured data.
+    </p>
+    <div class="card-actions">
+      <input type="text" id="idb-key" class="text-input" placeholder="Key" value="record1" style="width:120px" />
+      <input type="text" id="idb-val" class="text-input" placeholder="Value" value="IndexedDB rocks!" />
+      <button class="btn" id="btn-idb-put">Add / Update</button>
+      <button class="btn btn-ghost" id="btn-idb-get">Get</button>
+      <button class="btn btn-ghost" id="btn-idb-list">List All</button>
+      <button class="btn btn-ghost btn-danger" id="btn-idb-delete">Delete</button>
+    </div>
+    <div class="output" id="out-indexeddb">No data yet.</div>
+  </section>
+
+  <!-- 20 ─ Service Worker -->
+  <section class="card" id="sec-sw">
+    <div class="card-header">
+      <h2 class="card-title">Service Worker</h2>
+      <span class="badge" id="badge-sw">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>navigator.serviceWorker.register()</code> installs a proxy script that
+      enables offline caching. Requires HTTPS (or localhost).
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-sw-status">Check Status</button>
+      <button class="btn btn-ghost" id="btn-sw-unregister">Unregister</button>
+    </div>
+    <div class="output" id="out-sw">No data yet.</div>
+  </section>
+
+  <!-- 21 ─ History API -->
+  <section class="card" id="sec-history">
+    <div class="card-header">
+      <h2 class="card-title">History API</h2>
+      <span class="badge" id="badge-history">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>history.pushState()</code> and <code>history.replaceState()</code> update
+      the URL without a page reload — the backbone of single-page apps.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-history-push">Push State</button>
+      <button class="btn btn-ghost" id="btn-history-replace">Replace State</button>
+      <button class="btn btn-ghost" id="btn-history-back">Go Back</button>
+    </div>
+    <div class="output" id="out-history">No data yet.</div>
+  </section>
+
+  <!-- 22 ─ MatchMedia -->
+  <section class="card" id="sec-matchmedia">
+    <div class="card-header">
+      <h2 class="card-title">MatchMedia / prefers-color-scheme</h2>
+      <span class="badge" id="badge-matchmedia">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>window.matchMedia()</code> queries CSS media features from JavaScript and
+      fires events when they change, e.g. when the user switches OS dark/light mode.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-matchmedia">Read Media Queries</button>
+    </div>
+    <div class="output" id="out-matchmedia">No data yet.</div>
+  </section>
+
+  <!-- 23 ─ Pointer / Touch / Mouse Events -->
+  <section class="card" id="sec-pointer">
+    <div class="card-header">
+      <h2 class="card-title">Pointer / Touch / Mouse Events</h2>
+      <span class="badge" id="badge-pointer">checking…</span>
+    </div>
+    <p class="card-desc">
+      The unified <code>PointerEvent</code> API handles mouse, touch and stylus input
+      through a single event model.
+    </p>
+    <div class="pointer-canvas" id="pointer-canvas" tabindex="0"
+         role="application" aria-label="Interactive pointer canvas">
+      <span class="pointer-hint">Move pointer, touch or use stylus here</span>
+    </div>
+    <div class="output" id="out-pointer">No data yet.</div>
+  </section>
+
+  <!-- 24 ─ Gamepad -->
+  <section class="card" id="sec-gamepad">
+    <div class="card-header">
+      <h2 class="card-title">Gamepad API</h2>
+      <span class="badge" id="badge-gamepad">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>navigator.getGamepads()</code> returns connected controllers.
+      Connect a gamepad and press any button to activate it.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-gamepad-poll">Start Polling</button>
+      <button class="btn btn-ghost" id="btn-gamepad-stop">Stop</button>
+    </div>
+    <div class="output" id="out-gamepad">Connect a gamepad and press a button, then click "Start Polling".</div>
+  </section>
+
+  <!-- 25 ─ Web Worker -->
+  <section class="card" id="sec-worker">
+    <div class="card-header">
+      <h2 class="card-title">Web Worker</h2>
+      <span class="badge" id="badge-worker">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>new Worker()</code> runs JavaScript in a background thread, keeping the
+      main thread responsive. Demo: compute the Nth Fibonacci number off-thread.
+    </p>
+    <div class="card-actions">
+      <label>N = <input type="number" id="worker-n" class="text-input num-input" value="40" min="1" max="50" /></label>
+      <button class="btn" id="btn-worker-run">▶ Run in Worker</button>
+      <button class="btn btn-ghost" id="btn-worker-main">Run on Main Thread</button>
+    </div>
+    <div class="output" id="out-worker">No data yet.</div>
+  </section>
+
+  <!-- 26 ─ Performance API -->
+  <section class="card" id="sec-performance">
+    <div class="card-header">
+      <h2 class="card-title">Performance API</h2>
+      <span class="badge" id="badge-performance">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>performance.timing</code>, <code>performance.now()</code> and
+      <code>PerformanceObserver</code> expose precise timing data for profiling.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-perf">Show Timing Data</button>
+    </div>
+    <div class="output" id="out-performance">No data yet.</div>
+  </section>
+
+  <!-- 27 ─ Intersection Observer -->
+  <section class="card" id="sec-intersection">
+    <div class="card-header">
+      <h2 class="card-title">Intersection Observer</h2>
+      <span class="badge" id="badge-intersection">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>IntersectionObserver</code> fires callbacks when an element enters or
+      leaves the viewport — perfect for lazy loading and scroll animations.
+    </p>
+    <div class="scroll-container" id="scroll-container">
+      <div class="scroll-item" data-idx="1">Block 1</div>
+      <div class="scroll-item" data-idx="2">Block 2</div>
+      <div class="scroll-item" data-idx="3">Block 3</div>
+      <div class="scroll-item" data-idx="4">Block 4</div>
+      <div class="scroll-item" data-idx="5">Block 5</div>
+    </div>
+    <div class="output" id="out-intersection">Scroll the blocks above.</div>
+  </section>
+
+  <!-- 28 ─ Resize Observer -->
+  <section class="card" id="sec-resize">
+    <div class="card-header">
+      <h2 class="card-title">Resize Observer</h2>
+      <span class="badge" id="badge-resize">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>ResizeObserver</code> fires whenever an element's size changes,
+      without requiring a global resize event listener.
+    </p>
+    <div class="resize-box" id="resize-box" contenteditable="true"
+         aria-label="Resize this element by dragging its corner">
+      ↔ Drag this box corner or type to resize
+    </div>
+    <div class="output" id="out-resize">No data yet.</div>
+  </section>
+
+  <!-- 29 ─ Screen / Window Info -->
+  <section class="card" id="sec-screen">
+    <div class="card-header">
+      <h2 class="card-title">Screen &amp; Window Info</h2>
+      <span class="badge" id="badge-screen">checking…</span>
+    </div>
+    <p class="card-desc">
+      Exposes display properties via <code>window.screen</code>,
+      <code>devicePixelRatio</code>, and <code>screen.orientation</code>.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-screen">Read Screen Info</button>
+    </div>
+    <div class="output" id="out-screen">No data yet.</div>
+  </section>
+
+  <!-- 30 ─ Crypto API -->
+  <section class="card" id="sec-crypto">
+    <div class="card-header">
+      <h2 class="card-title">Crypto API</h2>
+      <span class="badge" id="badge-crypto">checking…</span>
+    </div>
+    <p class="card-desc">
+      <code>crypto.getRandomValues()</code> generates cryptographically strong
+      random numbers. <code>SubtleCrypto</code> provides hash/sign/encrypt primitives.
+    </p>
+    <div class="card-actions">
+      <button class="btn" id="btn-crypto-rand">Generate Random Bytes</button>
+      <input type="text" id="hash-input" class="text-input" placeholder="Text to hash (SHA-256)…" value="Hello, Web Crypto!" />
+      <button class="btn" id="btn-crypto-hash">Hash (SHA-256)</button>
+    </div>
+    <div class="output" id="out-crypto">No data yet.</div>
+  </section>
+
+</main>
+
+<!-- ══════════════════════════════════════════════════════════
+     GLOBAL EVENT LOG
+     ══════════════════════════════════════════════════════════ -->
+<section class="event-log-section" id="event-log-section">
+  <div class="event-log-header">
+    <h2>📋 Global Event Log</h2>
+    <button class="btn btn-ghost btn-sm" id="btn-clear-log">Clear Log</button>
+    <button class="btn btn-ghost btn-sm" id="btn-run-all">▶ Run All Supported Tests</button>
+  </div>
+  <div class="event-log" id="global-event-log" role="log" aria-live="polite">
+    <p class="log-placeholder">API events will appear here…</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     FOOTER / COMPATIBILITY NOTES
+     ══════════════════════════════════════════════════════════ -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <h2>ℹ️ Permissions &amp; Browser Compatibility</h2>
+    <ul class="compat-list">
+      <li>🔒 <strong>HTTPS required</strong> for: Geolocation, Camera/Mic, Clipboard (write), Wake Lock, Notifications, Service Worker, Speech Recognition, Web Share.</li>
+      <li>📱 <strong>Mobile-only</strong>: Vibration (Android), Device Orientation (iOS needs permission prompt).</li>
+      <li>🌐 <strong>Chromium-only</strong>: Battery Status API, Network Information API, Speech Recognition.</li>
+      <li>🦊 <strong>Firefox / Safari</strong>: Some APIs have limited or no support — the badge next to each card reflects the detected state in <em>your</em> current browser.</li>
+      <li>🏠 This page is deployed on <strong>GitHub Pages</strong> (HTTPS), so all permission-gated APIs will work as long as your browser supports them.</li>
+    </ul>
+    <p class="footer-copy">Built with pure HTML · CSS · Vanilla JS — no frameworks, no build tools.</p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
