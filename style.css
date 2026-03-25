@@ -292,6 +292,43 @@ code {
   line-height: 1.65;
 }
 
+.card-note {
+  font-size: .8rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.badge-feature {
+  display: inline-block;
+  margin-left: .5rem;
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: .18em .5em;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.badge-feature.level-stable {
+  background: rgba(35,134,54,.2);
+  color: var(--status-supported-t);
+  border-color: rgba(63,185,80,.25);
+}
+
+.badge-feature.level-experimental {
+  background: rgba(158,106,3,.2);
+  color: var(--status-limited-t);
+  border-color: rgba(227,179,65,.25);
+}
+
+.badge-feature.level-restricted {
+  background: rgba(139,26,26,.2);
+  color: var(--status-unsupported-t);
+  border-color: rgba(248,81,73,.25);
+}
+
 /* ── Status Badge ───────────────────────────────────────────────────────────── */
 .badge {
   display: inline-block;

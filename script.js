@@ -2224,6 +2224,305 @@ function initUrlUtilities() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
+   41. WEBHID API
+   ══════════════════════════════════════════════════════════════════════════════ */
+function initWebHid() {
+  const supported = 'hid' in navigator;
+  const secure = window.isSecureContext;
+  const level = supported ? (secure ? 'supported' : 'limited') : 'unsupported';
+  setStatus('badge-webhid', level, supported ? (secure ? 'supported' : 'secure-context only') : 'unsupported');
+
+  const connectBtn = document.getElementById('btn-hid-connect');
+  const listBtn = document.getElementById('btn-hid-list');
+
+  if (!supported) {
+    setOutput('out-webhid', 'WebHID is not supported in this browser.', 'err');
+    setDisabled(['btn-hid-connect', 'btn-hid-list'], true);
+    return;
+  }
+  if (!secure) {
+    setOutput('out-webhid', 'WebHID requires HTTPS (or localhost secure context).', 'warn');
+    setDisabled(['btn-hid-connect', 'btn-hid-list'], true);
+    return;
+  }
+
+  const hid = navigator.hid;
+  const hex = (n) => `0x${Number(n ?? 0).toString(16).padStart(4, '0')}`;
+  const formatDevice = (d) =>
+    `${d.productName || 'Unknown HID Device'}\n` +
+    `vendorId: ${hex(d.vendorId)}\n` +
+    `productId: ${hex(d.productId)}\n` +
+    `collections: ${Array.isArray(d.collections) ? d.collections.length : 'n/a'}\n` +
+    `opened: ${Boolean(d.opened)}`;
+
+  async function listDevices() {
+    try {
+      const devices = await hid.getDevices();
+      if (!devices.length) {
+        setOutput('out-webhid', 'No granted HID devices yet. Click "Connect HID Device" first.', 'warn');
+        return;
+      }
+      setOutput(
+        'out-webhid',
+        devices.map((d, i) => `#${i + 1}\n${formatDevice(d)}`).join('\n\n'),
+        'ok'
+      );
+      globalLog('info', 'WebHID', `Listed ${devices.length} granted device(s)`);
+    } catch (err) {
+      setOutput('out-webhid', `Failed to list HID devices: ${err.message}`, 'err');
+      globalLog('error', 'WebHID', `list error: ${err.message}`);
+    }
+  }
+
+  connectBtn?.addEventListener('click', async () => {
+    try {
+      const requested = await hid.requestDevice({ filters: [] });
+      if (!requested.length) {
+        setOutput('out-webhid', 'No HID device selected.', 'warn');
+        return;
+      }
+      setOutput(
+        'out-webhid',
+        requested.map((d, i) => `Connected #${i + 1}\n${formatDevice(d)}`).join('\n\n'),
+        'ok'
+      );
+      globalLog('ok', 'WebHID', `User granted ${requested.length} HID device(s)`);
+    } catch (err) {
+      if (err.name === 'NotFoundError') {
+        setOutput('out-webhid', 'No HID device selected.', 'warn');
+        globalLog('warn', 'WebHID', 'Device picker canceled');
+        return;
+      }
+      setOutput('out-webhid', `HID request failed: ${err.message}`, 'err');
+      globalLog('error', 'WebHID', `request error: ${err.message}`);
+    }
+  });
+
+  listBtn?.addEventListener('click', listDevices);
+
+  hid.addEventListener('connect', (event) => {
+    const d = event.device;
+    log('out-webhid', `Event: connected ${d.productName || 'HID device'} (${hex(d.vendorId)}:${hex(d.productId)})`, 'ok');
+    globalLog('ok', 'WebHID', `Device connected: ${d.productName || `${hex(d.vendorId)}:${hex(d.productId)}`}`);
+  });
+  hid.addEventListener('disconnect', (event) => {
+    const d = event.device;
+    log('out-webhid', `Event: disconnected ${d.productName || 'HID device'} (${hex(d.vendorId)}:${hex(d.productId)})`, 'warn');
+    globalLog('warn', 'WebHID', `Device disconnected: ${d.productName || `${hex(d.vendorId)}:${hex(d.productId)}`}`);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   42. WEBUSB API
+   ══════════════════════════════════════════════════════════════════════════════ */
+function initWebUsb() {
+  const supported = 'usb' in navigator;
+  const secure = window.isSecureContext;
+  const level = supported ? (secure ? 'supported' : 'limited') : 'unsupported';
+  setStatus('badge-webusb', level, supported ? (secure ? 'supported' : 'secure-context only') : 'unsupported');
+
+  if (!supported) {
+    setOutput('out-webusb', 'WebUSB is not supported in this browser.', 'err');
+    setDisabled(['btn-usb-request', 'btn-usb-list'], true);
+    return;
+  }
+  if (!secure) {
+    setOutput('out-webusb', 'WebUSB requires HTTPS (or localhost secure context).', 'warn');
+    setDisabled(['btn-usb-request', 'btn-usb-list'], true);
+    return;
+  }
+
+  const usb = navigator.usb;
+  const hex = (n) => `0x${Number(n ?? 0).toString(16).padStart(4, '0')}`;
+  const formatDevice = (d) =>
+    `${d.productName || 'Unknown USB Device'}\n` +
+    `manufacturer: ${d.manufacturerName || 'n/a'}\n` +
+    `vendorId: ${hex(d.vendorId)}\n` +
+    `productId: ${hex(d.productId)}\n` +
+    `serial: ${d.serialNumber || 'n/a'}`;
+
+  async function listDevices() {
+    try {
+      const devices = await usb.getDevices();
+      if (!devices.length) {
+        setOutput('out-webusb', 'No approved USB devices yet. Click "Request USB Device" first.', 'warn');
+        return;
+      }
+      setOutput(
+        'out-webusb',
+        devices.map((d, i) => `#${i + 1}\n${formatDevice(d)}`).join('\n\n'),
+        'ok'
+      );
+      globalLog('info', 'WebUSB', `Listed ${devices.length} approved device(s)`);
+    } catch (err) {
+      setOutput('out-webusb', `Failed to list USB devices: ${err.message}`, 'err');
+      globalLog('error', 'WebUSB', `list error: ${err.message}`);
+    }
+  }
+
+  document.getElementById('btn-usb-request')?.addEventListener('click', async () => {
+    try {
+      const device = await usb.requestDevice({ filters: [] });
+      setOutput('out-webusb', `Access granted:\n${formatDevice(device)}`, 'ok');
+      globalLog('ok', 'WebUSB', `Device granted: ${device.productName || `${hex(device.vendorId)}:${hex(device.productId)}`}`);
+    } catch (err) {
+      if (err.name === 'NotFoundError') {
+        setOutput('out-webusb', 'No USB device selected.', 'warn');
+        globalLog('warn', 'WebUSB', 'Device picker canceled');
+        return;
+      }
+      setOutput('out-webusb', `USB request failed: ${err.message}`, 'err');
+      globalLog('error', 'WebUSB', `request error: ${err.message}`);
+    }
+  });
+
+  document.getElementById('btn-usb-list')?.addEventListener('click', listDevices);
+
+  usb.addEventListener('connect', (event) => {
+    const d = event.device;
+    log('out-webusb', `Event: connected ${d.productName || 'USB device'} (${hex(d.vendorId)}:${hex(d.productId)})`, 'ok');
+    globalLog('ok', 'WebUSB', `Device connected: ${d.productName || `${hex(d.vendorId)}:${hex(d.productId)}`}`);
+  });
+  usb.addEventListener('disconnect', (event) => {
+    const d = event.device;
+    log('out-webusb', `Event: disconnected ${d.productName || 'USB device'} (${hex(d.vendorId)}:${hex(d.productId)})`, 'warn');
+    globalLog('warn', 'WebUSB', `Device disconnected: ${d.productName || `${hex(d.vendorId)}:${hex(d.productId)}`}`);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   43. WEB SERIAL API
+   ══════════════════════════════════════════════════════════════════════════════ */
+function initWebSerial() {
+  const supported = 'serial' in navigator;
+  const secure = window.isSecureContext;
+  const level = supported ? (secure ? 'supported' : 'limited') : 'unsupported';
+  setStatus('badge-webserial', level, supported ? (secure ? 'supported' : 'secure-context only') : 'unsupported');
+
+  if (!supported) {
+    setOutput('out-webserial', 'Web Serial API is not supported in this browser.', 'err');
+    setDisabled(['btn-serial-connect', 'btn-serial-disconnect', 'btn-serial-list'], true);
+    return;
+  }
+  if (!secure) {
+    setOutput('out-webserial', 'Web Serial API requires HTTPS (or localhost secure context).', 'warn');
+    setDisabled(['btn-serial-connect', 'btn-serial-disconnect', 'btn-serial-list'], true);
+    return;
+  }
+
+  let activePort = null;
+  let activeReader = null;
+  let reading = false;
+
+  async function listPorts() {
+    try {
+      const ports = await navigator.serial.getPorts();
+      if (!ports.length) {
+        setOutput('out-webserial', 'No granted serial ports yet. Click "Connect Serial Device" first.', 'warn');
+        return;
+      }
+      setOutput('out-webserial', `Granted serial ports: ${ports.length}`, 'ok');
+      globalLog('info', 'WebSerial', `Listed ${ports.length} granted port(s)`);
+    } catch (err) {
+      setOutput('out-webserial', `Failed to list serial ports: ${err.message}`, 'err');
+      globalLog('error', 'WebSerial', `list error: ${err.message}`);
+    }
+  }
+
+  async function stopReadingAndClose() {
+    reading = false;
+    if (activeReader) {
+      try {
+        await activeReader.cancel();
+      } catch (cancelErr) {
+        // Expected when the stream has already been closed or released during teardown.
+        if (cancelErr.name !== 'InvalidStateError') {
+          log('out-webserial', `Reader cancel warning: ${cancelErr.message}`, 'warn');
+        }
+      }
+    }
+    if (activePort) {
+      try {
+        await activePort.close();
+      } catch (err) {
+        log('out-webserial', `Close warning: ${err.message}`, 'warn');
+      }
+    }
+    activeReader = null;
+    activePort = null;
+  }
+
+  document.getElementById('btn-serial-connect')?.addEventListener('click', async () => {
+    if (reading) {
+      log('out-webserial', 'A serial session is already active.', 'warn');
+      return;
+    }
+    try {
+      const port = await navigator.serial.requestPort();
+      await port.open({ baudRate: 9600 });
+      activePort = port;
+      reading = true;
+      setOutput('out-webserial', 'Serial port connected at 9600 baud. Waiting for incoming data…', 'ok');
+      globalLog('ok', 'WebSerial', 'Serial port opened');
+
+      if (activePort?.readable) {
+        activeReader = activePort.readable.getReader();
+        const decoder = new TextDecoder();
+        try {
+          while (reading) {
+            const { value, done } = await activeReader.read();
+            if (done) break;
+            if (!reading) break;
+            if (value?.length) {
+              const text = decoder.decode(value, { stream: true });
+              if (text) log('out-webserial', `RX: ${text}`, 'ok');
+            }
+          }
+        } catch (err) {
+          if (reading) {
+            log('out-webserial', `Read error: ${err.message}`, 'err');
+            globalLog('error', 'WebSerial', `read error: ${err.message}`);
+          }
+        } finally {
+          try {
+            activeReader.releaseLock();
+          } catch (releaseErr) {
+            log('out-webserial', `Reader release warning: ${releaseErr.message}`, 'warn');
+          }
+          activeReader = null;
+        }
+      }
+    } catch (err) {
+      if (err.name === 'NotFoundError') {
+        setOutput('out-webserial', 'No serial port selected.', 'warn');
+        globalLog('warn', 'WebSerial', 'Port picker canceled');
+        return;
+      }
+      setOutput('out-webserial', `Serial connection failed: ${err.message}`, 'err');
+      globalLog('error', 'WebSerial', `connect error: ${err.message}`);
+      await stopReadingAndClose();
+    }
+  });
+
+  document.getElementById('btn-serial-disconnect')?.addEventListener('click', async () => {
+    await stopReadingAndClose();
+    setOutput('out-webserial', 'Serial connection closed.', 'warn');
+    globalLog('info', 'WebSerial', 'Serial session closed');
+  });
+
+  document.getElementById('btn-serial-list')?.addEventListener('click', listPorts);
+
+  navigator.serial.addEventListener('connect', () => {
+    log('out-webserial', 'Event: serial device connected.', 'ok');
+    globalLog('ok', 'WebSerial', 'Serial device connected');
+  });
+  navigator.serial.addEventListener('disconnect', () => {
+    log('out-webserial', 'Event: serial device disconnected.', 'warn');
+    globalLog('warn', 'WebSerial', 'Serial device disconnected');
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
    NAV TOGGLE
    ══════════════════════════════════════════════════════════════════════════════ */
 function initNav() {
@@ -2270,6 +2569,9 @@ function initEventLog() {
     document.getElementById('btn-pwa-refresh')?.click();
     document.getElementById('btn-realtime-check')?.click();
     document.getElementById('btn-url-read')?.click();
+    document.getElementById('btn-hid-list')?.click();
+    document.getElementById('btn-usb-list')?.click();
+    document.getElementById('btn-serial-list')?.click();
     globalLog('ok', 'RunAll', 'Passive tests triggered.');
   });
 }
@@ -2323,4 +2625,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initBroadcastChannelApi();
   initStorageEventDemo();
   initUrlUtilities();
+  initWebHid();
+  initWebUsb();
+  initWebSerial();
 });
